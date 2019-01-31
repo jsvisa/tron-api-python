@@ -18,9 +18,4 @@ if sys.version_info < (3, 5):
 
 __version__ = pkg_resources.get_distribution("tronapi").version
 
-__all__ = [
-    '__version__',
-    'HttpProvider',
-    'Account',
-    'Tron',
-]
+__all__ = ["__version__", "HttpProvider", "Account", "Tron"]

@@ -21,16 +21,14 @@ from urllib.parse import urlparse
 
 from eth_utils import to_dict
 from requests import Session
-from requests.exceptions import (
-    ConnectionError as TrxConnectionError
-)
+from requests.exceptions import ConnectionError as TrxConnectionError
 
 from tronapi.base.encoding import to_text
 from tronapi.providers.base import BaseProvider
 from tronapi.exceptions import HTTP_EXCEPTIONS, TransportError
 
-HTTP_SCHEMES = {'http', 'https'}
-HttpResponse = namedtuple('HttpResponse', ('status_code', 'headers', 'data'))
+HTTP_SCHEMES = {"http", "https"}
+HttpResponse = namedtuple("HttpResponse", ("status_code", "headers", "data"))
 
 log = logging.getLogger(__name__)
 
@@ -48,26 +46,25 @@ class HttpProvider(BaseProvider):
 
         """
 
-        self.node_url = node_url.rstrip('/')
+        self.node_url = node_url.rstrip("/")
         uri = urlparse(node_url)
         # This condition checks the node that will connect
         # to work with methods.
         if uri.scheme not in HTTP_SCHEMES:
             raise NotImplementedError(
-                'TronAPI does not know how to connect to scheme %r in %r' % (
-                    uri.scheme,
-                    self.node_url,
-                )
+                "TronAPI does not know how to connect to scheme %r in %r"
+                % (uri.scheme, self.node_url)
             )
 
         self._request_kwargs = request_kwargs or {}
         self.session = Session()
+        self.session.verify = False
 
     @to_dict
     def get_request_kwargs(self):
         """Header settings"""
-        if 'headers' not in self._request_kwargs:
-            yield 'headers', self._http_default_headers()
+        if "headers" not in self._request_kwargs:
+            yield "headers", self._http_default_headers()
         for key, value in self._request_kwargs.items():
             yield key, value
 
@@ -104,15 +101,15 @@ class HttpProvider(BaseProvider):
             bool: True if successful,
             False otherwise.
         """
-        response = self.request(path=self.status_page, method='get')
-        if 'blockID' in response or response == 'OK':
+        response = self.request(path=self.status_page, method="get")
+        if "blockID" in response or response == "OK":
             return True
 
         return False
 
     def _request(self, **kwargs):
 
-        kwargs.setdefault('timeout', 60)
+        kwargs.setdefault("timeout", 60)
         response = self.session.request(**kwargs)
         text = response.text
 
@@ -123,13 +120,13 @@ class HttpProvider(BaseProvider):
 
         if not (200 <= response.status_code < 300):
             exc_cls = HTTP_EXCEPTIONS.get(response.status_code, TransportError)
-            raise exc_cls(response.status_code, text, json, kwargs.get('url'))
+            raise exc_cls(response.status_code, text, json, kwargs.get("url"))
 
         data = json if json is not None else text
 
         # Additional error interceptor that will occur in case of failed requests
-        if 'Error' in data:
-            raise ValueError(data['Error'])
+        if "Error" in data:
+            raise ValueError(data["Error"])
 
         self.__error_manager(data)
         # enabled log
@@ -146,9 +143,9 @@ class HttpProvider(BaseProvider):
 
         """
         # Additional error interceptor that will occur in case of failed requests
-        if 'Error' in data:
-            raise ValueError(data['Error'])
+        if "Error" in data:
+            raise ValueError(data["Error"])
 
         # Convert hash errors
-        if 'code' in data and 'message' in data:
-            data['message'] = to_text(hexstr=data['message'])
+        if "code" in data and "message" in data:
+            data["message"] = to_text(hexstr=data["message"])

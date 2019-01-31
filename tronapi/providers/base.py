@@ -22,7 +22,4 @@ class BaseProvider(object):
     @staticmethod
     def _http_default_headers():
         """Add default headers"""
-        return {
-            'Content-Type': 'application/json',
-            'User-Agent': format_user_agent()
-        }
+        return {"Content-Type": "application/json", "User-Agent": format_user_agent()}

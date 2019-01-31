@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------------------------------
 # Copyright (c) iEXBase. All rights reserved.
-# Licensed under the MIT License. See License.txt in the project root for license information.
+# Licensed under the MIT License.
+# See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
 
 import codecs
@@ -26,7 +27,7 @@ class Account(object):
     def to_hex(address):
         """Helper function that will convert a generic value to hex"""
         if is_hex(address):
-            return address.lower().replace('0x', '41', 2)
+            return address.lower().replace("0x", "41", 2)
 
         return base58.b58decode_check(address).hex().upper()
 
@@ -43,34 +44,31 @@ class PrivateKey(object):
         Example:::
             PrivateKey("4d1bc37b069b9f2e975c37770b7c87185dc3a10454e3ea024ce1fce8f3eb78bf")
         """
-        _private = unhexlify(bytes(private_key, encoding='utf8'))
+        _private = unhexlify(bytes(private_key, encoding="utf8"))
         self._key = KeyAPI.PrivateKey(_private)
         _length = len(self._key)
 
         # Key length must not exceed 64 length
         if _length < 64:
-            raise ValueError('Key length must not exceed 64 length')
+            raise ValueError("Key length must not exceed 64 length")
 
     @property
     def private_key(self):
         _raw_key = self._key.to_bytes()
-        return codecs.decode(codecs.encode(_raw_key, 'hex'), 'ascii')
+        return codecs.decode(codecs.encode(_raw_key, "hex"), "ascii")
 
     @property
     def public_key(self) -> str:
         public_key = self._key.public_key
-        return '04' + str(public_key)[2:]
+        return "04" + str(public_key)[2:]
 
     @property
     def address(self):
         public_key = self._key.public_key
-        address = '41' + public_key.to_address()[2:]
+        address = "41" + public_key.to_address()[2:]
         to_base58 = base58.b58encode_check(bytes.fromhex(address))
 
-        return AttributeDict({
-            'hex': address,
-            'base58': to_base58.decode()
-        })
+        return AttributeDict({"hex": address, "base58": to_base58.decode()})
 
     def __str__(self):
         return self.private_key

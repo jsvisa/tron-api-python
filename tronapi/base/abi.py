@@ -7,108 +7,67 @@
 import itertools
 import re
 
-from collections import (
-    namedtuple,
-)
+from collections import namedtuple
 
 from eth_abi import is_encodable
 from eth_utils import to_tuple
 
 from tronapi.base.formatters import recursive_map
 from tronapi.exceptions import FallbackNotFound
-from tronapi.base.toolz import (
-    curry,
-    partial,
-    pipe,
-)
+from tronapi.base.toolz import curry, partial, pipe
 
-DYNAMIC_TYPES = ['bytes', 'string']
+DYNAMIC_TYPES = ["bytes", "string"]
 
 INT_SIZES = range(8, 257, 8)
 BYTES_SIZES = range(1, 33)
-UINT_TYPES = ['uint{0}'.format(i) for i in INT_SIZES]
-INT_TYPES = ['int{0}'.format(i) for i in INT_SIZES]
-BYTES_TYPES = ['bytes{0}'.format(i) for i in BYTES_SIZES] + ['bytes32.byte']
+UINT_TYPES = ["uint{0}".format(i) for i in INT_SIZES]
+INT_TYPES = ["int{0}".format(i) for i in INT_SIZES]
+BYTES_TYPES = ["bytes{0}".format(i) for i in BYTES_SIZES] + ["bytes32.byte"]
 
-STATIC_TYPES = list(itertools.chain(
-    ['address', 'bool'],
-    UINT_TYPES,
-    INT_TYPES,
-    BYTES_TYPES,
-))
-
-BASE_TYPE_REGEX = '|'.join((
-    _type + '(?![a-z0-9])'
-    for _type
-    in itertools.chain(STATIC_TYPES, DYNAMIC_TYPES)
-))
-
-SUB_TYPE_REGEX = (
-    r'\['
-    '[0-9]*'
-    r'\]'
+STATIC_TYPES = list(
+    itertools.chain(["address", "bool"], UINT_TYPES, INT_TYPES, BYTES_TYPES)
 )
 
-TYPE_REGEX = (
-    '^'
-    '(?:{base_type})'
-    '(?:(?:{sub_type})*)?'
-    '$'
-).format(
-    base_type=BASE_TYPE_REGEX,
-    sub_type=SUB_TYPE_REGEX,
+BASE_TYPE_REGEX = "|".join(
+    (_type + "(?![a-z0-9])" for _type in itertools.chain(STATIC_TYPES, DYNAMIC_TYPES))
 )
 
-NAME_REGEX = (
-    '[a-zA-Z_]'
-    '[a-zA-Z0-9_]*'
+SUB_TYPE_REGEX = r"\[" "[0-9]*" r"\]"
+
+TYPE_REGEX = ("^" "(?:{base_type})" "(?:(?:{sub_type})*)?" "$").format(
+    base_type=BASE_TYPE_REGEX, sub_type=SUB_TYPE_REGEX
 )
 
-ENUM_REGEX = (
-    '^'
-    '{lib_name}'
-    r'\.'
-    '{enum_name}'
-    '$'
-).format(lib_name=NAME_REGEX, enum_name=NAME_REGEX)
+NAME_REGEX = "[a-zA-Z_]" "[a-zA-Z0-9_]*"
+
+ENUM_REGEX = ("^" "{lib_name}" r"\." "{enum_name}" "$").format(
+    lib_name=NAME_REGEX, enum_name=NAME_REGEX
+)
 
 END_BRACKETS_OF_ARRAY_TYPE_REGEX = r"\[[^]]*\]$"
 
-NAME_REGEX = (
-    '[a-zA-Z_]'
-    '[a-zA-Z0-9_]*'
-)
+NAME_REGEX = "[a-zA-Z_]" "[a-zA-Z0-9_]*"
 
-ARRAY_REGEX = (
-    "^"
-    "[a-zA-Z0-9_]+"
-    "({sub_type})+"
-    "$"
-).format(sub_type=SUB_TYPE_REGEX)
+ARRAY_REGEX = ("^" "[a-zA-Z0-9_]+" "({sub_type})+" "$").format(sub_type=SUB_TYPE_REGEX)
 
 
 def filter_by_argument_name(argument_names, contract_abi):
     return [
         abi
         for abi in contract_abi
-        if set(argument_names).intersection(
-            get_abi_input_names(abi)
-        ) == set(argument_names)
+        if set(argument_names).intersection(get_abi_input_names(abi))
+        == set(argument_names)
     ]
 
 
 try:
-    from eth_abi.abi import (
-        process_type,
-        collapse_type,
-    )
+    from eth_abi.abi import process_type, collapse_type
 except ImportError:
     from eth_abi.grammar import (
         parse as parse_type_string,
         normalize as normalize_type_string,
         TupleType,
     )
-
 
     def process_type(type_str):
         normalized_type_str = normalize_type_string(type_str)
@@ -117,14 +76,13 @@ except ImportError:
         if isinstance(abi_type, TupleType):
             type_str_repr = repr(type_str)
             if type_str != normalized_type_str:
-                type_str_repr = '{} (normalized to {})'.format(
-                    type_str_repr,
-                    repr(normalized_type_str),
+                type_str_repr = "{} (normalized to {})".format(
+                    type_str_repr, repr(normalized_type_str)
                 )
 
             raise ValueError(
                 "Cannot process type {}: tuple types not supported".format(
-                    type_str_repr,
+                    type_str_repr
                 )
             )
 
@@ -132,11 +90,11 @@ except ImportError:
 
         sub = abi_type.sub
         if isinstance(sub, tuple):
-            sub = 'x'.join(map(str, sub))
+            sub = "x".join(map(str, sub))
         elif isinstance(sub, int):
             sub = str(sub)
         else:
-            sub = ''
+            sub = ""
 
         arrlist = abi_type.arrlist
         if isinstance(arrlist, tuple):
@@ -146,46 +104,41 @@ except ImportError:
 
         return abi_type.base, sub, arrlist
 
-
     def collapse_type(base, sub, arrlist):
-        return base + str(sub) + ''.join(map(repr, arrlist))
+        return base + str(sub) + "".join(map(repr, arrlist))
 
 
 def filter_by_type(_type, contract_abi):
-    return [abi for abi in contract_abi if abi['type'] == _type]
+    return [abi for abi in contract_abi if abi["type"] == _type]
 
 
 def filter_by_name(name, contract_abi):
     return [
         abi
-        for abi
-        in contract_abi
-        if (
-                abi['type'] not in ('fallback', 'constructor') and
-                abi['name'] == name
-        )
+        for abi in contract_abi
+        if (abi["type"] not in ("fallback", "constructor") and abi["name"] == name)
     ]
 
 
 def get_abi_input_types(abi):
-    if 'inputs' not in abi and abi['type'] == 'fallback':
+    if "inputs" not in abi and abi["type"] == "fallback":
         return []
     else:
-        return [arg['type'] for arg in abi['inputs']]
+        return [arg["type"] for arg in abi["inputs"]]
 
 
 def get_abi_output_types(abi):
-    if abi['type'] == 'fallback':
+    if abi["type"] == "fallback":
         return []
     else:
-        return [arg['type'] for arg in abi['outputs']]
+        return [arg["type"] for arg in abi["outputs"]]
 
 
 def get_abi_input_names(abi):
-    if 'inputs' not in abi and abi['type'] == 'fallback':
+    if "inputs" not in abi and abi["type"] == "fallback":
         return []
     else:
-        return [arg['name'] for arg in abi['inputs']]
+        return [arg["name"] for arg in abi["inputs"]]
 
 
 def length_of_array_type(abi_type):
@@ -194,7 +147,9 @@ def length_of_array_type(abi_type):
             "Cannot parse length of nonarray abi-type: {0}".format(abi_type)
         )
 
-    inner_brackets = re.search(END_BRACKETS_OF_ARRAY_TYPE_REGEX, abi_type).group(0).strip("[]")
+    inner_brackets = (
+        re.search(END_BRACKETS_OF_ARRAY_TYPE_REGEX, abi_type).group(0).strip("[]")
+    )
     if not inner_brackets:
         return None
     else:
@@ -202,7 +157,7 @@ def length_of_array_type(abi_type):
 
 
 def get_fallback_func_abi(contract_abi):
-    fallback_abis = filter_by_type('fallback', contract_abi)
+    fallback_abis = filter_by_type("fallback", contract_abi)
     if fallback_abis:
         return fallback_abis[0]
     else:
@@ -210,13 +165,11 @@ def get_fallback_func_abi(contract_abi):
 
 
 def fallback_func_abi_exists(contract_abi):
-    return filter_by_type('fallback', contract_abi)
+    return filter_by_type("fallback", contract_abi)
 
 
 def get_constructor_abi(contract_abi):
-    candidates = [
-        abi for abi in contract_abi if abi['type'] == 'constructor'
-    ]
+    candidates = [abi for abi in contract_abi if abi["type"] == "constructor"]
     if len(candidates) == 1:
         return candidates[0]
     elif len(candidates) == 0:
@@ -230,7 +183,7 @@ def is_recognized_type(abi_type):
 
 
 def is_bool_type(abi_type):
-    return abi_type == 'bool'
+    return abi_type == "bool"
 
 
 def is_uint_type(abi_type):
@@ -242,15 +195,15 @@ def is_int_type(abi_type):
 
 
 def is_address_type(abi_type):
-    return abi_type == 'address'
+    return abi_type == "address"
 
 
 def is_bytes_type(abi_type):
-    return abi_type in BYTES_TYPES + ['bytes']
+    return abi_type in BYTES_TYPES + ["bytes"]
 
 
 def is_string_type(abi_type):
-    return abi_type == 'string'
+    return abi_type == "string"
 
 
 @curry
@@ -262,15 +215,15 @@ def size_of_type(abi_type):
     """
     Returns size in bits of abi_type
     """
-    if 'string' in abi_type:
+    if "string" in abi_type:
         return None
-    if 'byte' in abi_type:
+    if "byte" in abi_type:
         return None
-    if '[' in abi_type:
+    if "[" in abi_type:
         return None
-    if abi_type == 'bool':
+    if abi_type == "bool":
         return 8
-    if abi_type == 'address':
+    if abi_type == "address":
         return 160
     return int(re.sub(r"\D", "", abi_type))
 
@@ -285,7 +238,7 @@ def sub_type_of_array_type(abi_type):
             "Cannot parse subtype of nonarray abi-type: {0}".format(abi_type)
         )
 
-    return re.sub(END_BRACKETS_OF_ARRAY_TYPE_REGEX, '', abi_type, 1)
+    return re.sub(END_BRACKETS_OF_ARRAY_TYPE_REGEX, "", abi_type, 1)
 
 
 def is_probably_enum(abi_type):
@@ -295,38 +248,32 @@ def is_probably_enum(abi_type):
 @to_tuple
 def normalize_event_input_types(abi_args):
     for arg in abi_args:
-        if is_recognized_type(arg['type']):
+        if is_recognized_type(arg["type"]):
             yield arg
-        elif is_probably_enum(arg['type']):
-            yield {k: 'uint8' if k == 'type' else v for k, v in arg.items()}
+        elif is_probably_enum(arg["type"]):
+            yield {k: "uint8" if k == "type" else v for k, v in arg.items()}
         else:
             yield arg
 
 
 def abi_to_signature(abi):
     function_signature = "{fn_name}({fn_input_types})".format(
-        fn_name=abi['name'],
-        fn_input_types=','.join([
-            arg['type'] for arg in normalize_event_input_types(abi.get('inputs', []))
-        ]),
+        fn_name=abi["name"],
+        fn_input_types=",".join(
+            [arg["type"] for arg in normalize_event_input_types(abi.get("inputs", []))]
+        ),
     )
     return function_signature
 
 
 def filter_by_argument_count(num_arguments, contract_abi):
-    return [
-        abi
-        for abi
-        in contract_abi
-        if len(abi['inputs']) == num_arguments
-    ]
+    return [abi for abi in contract_abi if len(abi["inputs"]) == num_arguments]
 
 
 def filter_by_encodability(args, kwargs, contract_abi):
     return [
         function_abi
-        for function_abi
-        in contract_abi
+        for function_abi in contract_abi
         if check_if_arguments_can_be_encoded(function_abi, args, kwargs)
     ]
 
@@ -337,23 +284,19 @@ def check_if_arguments_can_be_encoded(function_abi, args, kwargs):
     except TypeError:
         return False
 
-    if len(function_abi.get('inputs', [])) != len(arguments):
+    if len(function_abi.get("inputs", [])) != len(arguments):
         return False
 
     types = get_abi_input_types(function_abi)
 
-    return all(
-        is_encodable(_type, arg)
-        for _type, arg in zip(types, arguments)
-    )
+    return all(is_encodable(_type, arg) for _type, arg in zip(types, arguments))
 
 
 def merge_args_and_kwargs(function_abi, args, kwargs):
-    if len(args) + len(kwargs) != len(function_abi.get('inputs', [])):
+    if len(args) + len(kwargs) != len(function_abi.get("inputs", [])):
         raise TypeError(
             "Incorrect argument count.  Expected '{0}'.  Got '{1}'".format(
-                len(function_abi['inputs']),
-                len(args) + len(kwargs),
+                len(function_abi["inputs"]), len(args) + len(kwargs)
             )
         )
 
@@ -361,43 +304,41 @@ def merge_args_and_kwargs(function_abi, args, kwargs):
         return args
 
     args_as_kwargs = {
-        arg_abi['name']: arg
-        for arg_abi, arg in zip(function_abi['inputs'], args)
+        arg_abi["name"]: arg for arg_abi, arg in zip(function_abi["inputs"], args)
     }
     duplicate_keys = set(args_as_kwargs).intersection(kwargs.keys())
     if duplicate_keys:
         raise TypeError(
             "{fn_name}() got multiple values for argument(s) '{dups}'".format(
-                fn_name=function_abi['name'],
-                dups=', '.join(duplicate_keys),
+                fn_name=function_abi["name"], dups=", ".join(duplicate_keys)
             )
         )
 
-    sorted_arg_names = [arg_abi['name'] for arg_abi in function_abi['inputs']]
+    sorted_arg_names = [arg_abi["name"] for arg_abi in function_abi["inputs"]]
 
     unknown_kwargs = {key for key in kwargs.keys() if key not in sorted_arg_names}
     if unknown_kwargs:
-        if function_abi.get('name'):
+        if function_abi.get("name"):
             raise TypeError(
                 "{fn_name}() got unexpected keyword argument(s) '{dups}'".format(
-                    fn_name=function_abi.get('name'),
-                    dups=', '.join(unknown_kwargs),
+                    fn_name=function_abi.get("name"), dups=", ".join(unknown_kwargs)
                 )
             )
         # show type instead of name in the error message incase key 'name' is missing.
         raise TypeError(
             "Type: '{_type}' got unexpected keyword argument(s) '{dups}'".format(
-                _type=function_abi.get('type'),
-                dups=', '.join(unknown_kwargs),
+                _type=function_abi.get("type"), dups=", ".join(unknown_kwargs)
             )
         )
 
-    sorted_args = list(zip(
-        *sorted(
-            itertools.chain(kwargs.items(), args_as_kwargs.items()),
-            key=lambda kv: sorted_arg_names.index(kv[0])
+    sorted_args = list(
+        zip(
+            *sorted(
+                itertools.chain(kwargs.items(), args_as_kwargs.items()),
+                key=lambda kv: sorted_arg_names.index(kv[0]),
+            )
         )
-    ))
+    )
     if sorted_args:
         return sorted_args[1]
     else:
@@ -417,13 +358,9 @@ def abi_sub_tree(data_type, data_value):
 
     if arrlist:
         sub_type = (base, sub, arrlist[:-1])
-        return ABITypedData([
-            collapsed,
-            [
-                abi_sub_tree(sub_type, sub_value)
-                for sub_value in data_value
-            ],
-        ])
+        return ABITypedData(
+            [collapsed, [abi_sub_tree(sub_type, sub_value) for sub_value in data_value]]
+        )
     else:
         return ABITypedData([collapsed, data_value])
 
@@ -476,17 +413,16 @@ def abi_data_tree(types, data):
 
     return [
         abi_sub_tree(data_type, data_value)
-        for data_type, data_value
-        in zip(types, data)
+        for data_type, data_value in zip(types, data)
     ]
 
 
 @curry
 def data_tree_map(func, data_tree):
-    '''
+    """
     Map func to every ABITypedData element in the tree. func will
     receive two args: abi_type, and data
-    '''
+    """
 
     def map_to_typed_data(elements):
         if isinstance(elements, ABITypedData) and elements.abi_type is not None:
@@ -497,8 +433,8 @@ def data_tree_map(func, data_tree):
     return recursive_map(map_to_typed_data, data_tree)
 
 
-class ABITypedData(namedtuple('ABITypedData', 'abi_type, data')):
-    '''
+class ABITypedData(namedtuple("ABITypedData", "abi_type, data")):
+    """
     This class marks data as having a certain ABI-type.
 
     >>> a1 = ABITypedData(['address', addr1])
@@ -514,7 +450,7 @@ class ABITypedData(namedtuple('ABITypedData', 'abi_type, data')):
     Unlike a typical `namedtuple`, you initialize with a single
     positional argument that is iterable, to match the init
     interface of all other relevant collections.
-    '''
+    """
 
     def __new__(cls, iterable):
         return super().__new__(cls, *iterable)

@@ -4,32 +4,30 @@ from typing import Union
 
 from hexbytes import HexBytes
 
-from eth_utils import (
-    hexstr_if_str,
-    to_hex,
-    big_endian_to_int,
-    int_to_big_endian
-)
+from eth_utils import hexstr_if_str, to_hex, big_endian_to_int, int_to_big_endian
 
-from tronapi.base.abi import size_of_type, sub_type_of_array_type, is_array_type, is_bool_type, is_uint_type, \
-    is_int_type, is_address_type, is_bytes_type, is_string_type
+from tronapi.base.abi import (
+    size_of_type,
+    sub_type_of_array_type,
+    is_array_type,
+    is_bool_type,
+    is_uint_type,
+    is_int_type,
+    is_address_type,
+    is_bytes_type,
+    is_string_type,
+)
 from tronapi.base.validation import validate_abi_type, validate_abi_value
 from tronapi.utils.hexadecimal import (
     remove_0x_prefix,
     decode_hex,
     encode_hex,
-    add_0x_prefix
+    add_0x_prefix,
 )
 
-from tronapi.base.toolz import (
-    curry
-)
+from tronapi.base.toolz import curry
 
-from tronapi.utils.types import (
-    is_boolean,
-    is_integer,
-    is_list_like,
-    is_bytes)
+from tronapi.utils.types import is_boolean, is_integer, is_list_like, is_bytes
 
 from tronapi.base.datastructures import AttributeDict
 from tronapi.utils.validation import assert_one_val
@@ -45,7 +43,9 @@ def hex_encode_abi_type(abi_type, value, force_size=None):
     data_size = force_size or size_of_type(abi_type)
     if is_array_type(abi_type):
         sub_type = sub_type_of_array_type(abi_type)
-        return "".join([remove_0x_prefix(hex_encode_abi_type(sub_type, v, 256)) for v in value])
+        return "".join(
+            [remove_0x_prefix(hex_encode_abi_type(sub_type, v, 256)) for v in value]
+        )
     elif is_bool_type(abi_type):
         return to_hex_with_size(value, data_size)
     elif is_uint_type(abi_type):
@@ -62,9 +62,7 @@ def hex_encode_abi_type(abi_type, value, force_size=None):
     elif is_string_type(abi_type):
         return to_hex(text=value)
     else:
-        raise ValueError(
-            "Unsupported ABI type: {0}".format(abi_type)
-        )
+        raise ValueError("Unsupported ABI type: {0}".format(abi_type))
 
 
 def to_hex_twos_compliment(value, bit_size):
@@ -92,10 +90,10 @@ def pad_hex(value, bit_size):
 
 
 def trim_hex(hexstr):
-    if hexstr.startswith('0x0'):
-        hexstr = re.sub('^0x0+', '0x', hexstr)
-        if hexstr == '0x':
-            hexstr = '0x0'
+    if hexstr.startswith("0x0"):
+        hexstr = re.sub("^0x0+", "0x", hexstr)
+        if hexstr == "0x":
+            hexstr = "0x0"
     return hexstr
 
 
@@ -126,7 +124,9 @@ def to_int(value=None, hexstr=None, text=None):
 
 @curry
 def text_if_str(to_type, text_or_primitive):
-    """Convert to a type, assuming that strings can be only unicode text (not a hexstr)"""
+    """
+    Convert to a type, assuming that strings can be only unicode text (not a hexstr)
+    """
     if isinstance(text_or_primitive, str):
         (primitive, text) = (None, text_or_primitive)
     else:
@@ -138,13 +138,13 @@ def to_text(primitive=None, hexstr=None, text=None):
     assert_one_val(primitive, hexstr=hexstr, text=text)
 
     if hexstr is not None:
-        return to_bytes(hexstr=hexstr).decode('utf-8')
+        return to_bytes(hexstr=hexstr).decode("utf-8")
     elif text is not None:
         return text
     elif isinstance(primitive, str):
         return to_text(hexstr=primitive)
     elif isinstance(primitive, bytes):
-        return primitive.decode('utf-8')
+        return primitive.decode("utf-8")
     elif is_integer(primitive):
         byte_encoding = int_to_big_endian(primitive)
         return to_text(byte_encoding)
@@ -155,17 +155,17 @@ def to_bytes(primitive=None, hexstr=None, text=None):
     assert_one_val(primitive, hexstr=hexstr, text=text)
 
     if is_boolean(primitive):
-        return b'\x01' if primitive else b'\x00'
+        return b"\x01" if primitive else b"\x00"
     elif isinstance(primitive, bytes):
         return primitive
     elif is_integer(primitive):
         return to_bytes(hexstr=to_hex(primitive))
     elif hexstr is not None:
         if len(hexstr) % 2:
-            hexstr = '0x0' + remove_0x_prefix(hexstr)
+            hexstr = "0x0" + remove_0x_prefix(hexstr)
         return decode_hex(hexstr)
     elif text is not None:
-        return text.encode('utf-8')
+        return text.encode("utf-8")
     raise TypeError("expected an int in first arg, or keyword of hexstr or text")
 
 
@@ -174,7 +174,7 @@ def to_4byte_hex(hex_or_str_or_bytes: Union[int, str, bytes]) -> str:
     byte_str = hexstr_if_str(to_bytes, hex_or_str_or_bytes)
     if len(byte_str) > 4:
         raise ValueError(
-            'expected value of size 4 bytes. Got: %d bytes' % len(byte_str)
+            "expected value of size 4 bytes. Got: %d bytes" % len(byte_str)
         )
     hex_str = encode_hex(byte_str)
     return pad_hex(hex_str, size_of_4bytes)
@@ -207,12 +207,16 @@ class FriendlyJsonSerialize:
             encoded = json.dumps(obj, cls=cls)
             return encoded
         except TypeError as full_exception:
-            if hasattr(obj, 'items'):
-                item_errors = '; '.join(self._json_mapping_errors(obj))
-                raise TypeError("dict had unencodable value at keys: {{{}}}".format(item_errors))
+            if hasattr(obj, "items"):
+                item_errors = "; ".join(self._json_mapping_errors(obj))
+                raise TypeError(
+                    "dict had unencodable value at keys: {{{}}}".format(item_errors)
+                )
             elif is_list_like(obj):
-                element_errors = '; '.join(self._json_list_errors(obj))
-                raise TypeError("list had unencodable value at index: [{}]".format(element_errors))
+                element_errors = "; ".join(self._json_list_errors(obj))
+                raise TypeError(
+                    "list had unencodable value at index: [{}]".format(element_errors)
+                )
             else:
                 raise full_exception
 
@@ -222,7 +226,7 @@ class FriendlyJsonSerialize:
             decoded = json.loads(json_str)
             return decoded
         except json.decoder.JSONDecodeError as exc:
-            err_msg = 'Could not decode {} because of {}.'.format(repr(json_str), exc)
+            err_msg = "Could not decode {} because of {}.".format(repr(json_str), exc)
             # Calling code may rely on catching JSONDecodeError to recognize bad json
             # so we have to re-raise the same type.
             raise json.decoder.JSONDecodeError(err_msg, exc.doc, exc.pos)

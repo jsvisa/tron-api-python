@@ -13,25 +13,15 @@ from tronapi.base.abi import (
     merge_args_and_kwargs,
     abi_to_signature,
     fallback_func_abi_exists,
-    check_if_arguments_can_be_encoded
+    check_if_arguments_can_be_encoded,
 )
 from tronapi.base.contracts import find_matching_fn_abi, encode_abi, get_function_info
 from tronapi.base.datatypes import PropertyCheckingFactory
-from tronapi.base.decorators import (
-    combomethod,
-    deprecated_for
-)
+from tronapi.base.decorators import combomethod, deprecated_for
 from tronapi.base.encoding import to_4byte_hex
 from tronapi.base.function_identifiers import FallbackFn
-from tronapi.base.normalizers import (
-    normalize_abi,
-    normalize_bytecode
-)
-from tronapi.exceptions import (
-    NoABIFunctionsFound,
-    MismatchedABI,
-    FallbackNotFound
-)
+from tronapi.base.normalizers import normalize_abi, normalize_bytecode
+from tronapi.exceptions import NoABIFunctionsFound, MismatchedABI, FallbackNotFound
 from tronapi.utils.hexadecimal import encode_hex
 from tronapi.utils.types import is_text
 
@@ -47,6 +37,7 @@ class NonExistentFallbackFunction:
 
 class ContractFunction:
     """Base class for contract functions"""
+
     address = None
     function_identifier = None
     tron = None
@@ -76,13 +67,10 @@ class ContractFunction:
     def _set_function_info(self):
         if not self.abi:
             self.abi = find_matching_fn_abi(
-                self.contract_abi,
-                self.function_identifier,
-                self.args,
-                self.kwargs
+                self.contract_abi, self.function_identifier, self.args, self.kwargs
             )
         if self.function_identifier is FallbackFn:
-            self.selector = encode_hex(b'')
+            self.selector = encode_hex(b"")
         elif is_text(self.function_identifier):
             self.selector = encode_hex(function_abi_to_4byte_selector(self.abi))
         else:
@@ -92,15 +80,15 @@ class ContractFunction:
 
     @classmethod
     def factory(cls, class_name, **kwargs):
-        return PropertyCheckingFactory(class_name, (cls,), kwargs)(kwargs.get('abi'))
+        return PropertyCheckingFactory(class_name, (cls,), kwargs)(kwargs.get("abi"))
 
     def __repr__(self):
         if self.abi:
-            _repr = '<Function %s' % abi_to_signature(self.abi)
+            _repr = "<Function %s" % abi_to_signature(self.abi)
             if self.arguments is not None:
-                _repr += ' bound to %r' % (self.arguments,)
-            return _repr + '>'
-        return '<Function %s>' % self.fn_name
+                _repr += " bound to %r" % (self.arguments,)
+            return _repr + ">"
+        return "<Function %s>" % self.fn_name
 
 
 class ContractFunctions:
@@ -110,35 +98,39 @@ class ContractFunctions:
     def __init__(self, abi, tron, address=None):
         if abi:
             self.abi = abi
-            self._functions = filter_by_type('function', self.abi)
+            self._functions = filter_by_type("function", self.abi)
             for func in self._functions:
                 setattr(
                     self,
-                    func['name'],
+                    func["name"],
                     ContractFunction.factory(
-                        func['name'],
+                        func["name"],
                         tron=tron,
                         contract_abi=self.abi,
                         address=address,
-                        function_identifier=func['name']))
+                        function_identifier=func["name"],
+                    ),
+                )
 
     def __iter__(self):
-        if not hasattr(self, '_functions') or not self._functions:
+        if not hasattr(self, "_functions") or not self._functions:
             return
 
         for func in self._functions:
-            yield func['name']
+            yield func["name"]
 
     def __getattr__(self, function_name):
-        if '_functions' not in self.__dict__:
+        if "_functions" not in self.__dict__:
             raise NoABIFunctionsFound(
                 "The abi for this contract contains no function definitions. ",
-                "Are you sure you provided the correct contract abi?"
+                "Are you sure you provided the correct contract abi?",
             )
-        elif function_name not in self.__dict__['_functions']:
+        elif function_name not in self.__dict__["_functions"]:
             raise MismatchedABI(
-                "The function '{}' was not found in this contract's abi. ".format(function_name),
-                "Are you sure you provided the correct contract abi?"
+                "The function '{}' was not found in this contract's abi. ".format(
+                    function_name
+                ),
+                "Are you sure you provided the correct contract abi?",
             )
         else:
             return super().__getattribute__(function_name)
@@ -169,37 +161,43 @@ class Contract:
         """
         if self.tron is None:
             raise AttributeError(
-                'The `Contract` class has not been initialized.  Please use the '
-                '`tron.contract` interface to create your contract class.'
+                "The `Contract` class has not been initialized.  Please use the "
+                "`tron.contract` interface to create your contract class."
             )
 
         if address:
             self.address = self.tron.address.to_hex(address)
 
         if not self.address:
-            raise TypeError("The address argument is required to instantiate a contract.")
+            raise TypeError(
+                "The address argument is required to instantiate a contract."
+            )
 
         self.functions = ContractFunctions(self.abi, self.tron, self.address)
-        self.fallback = Contract.get_fallback_function(self.abi, self.tron, self.address)
+        self.fallback = Contract.get_fallback_function(
+            self.abi, self.tron, self.address
+        )
 
     @classmethod
     def factory(cls, tron, class_name=None, **kwargs):
 
-        kwargs['tron'] = tron
+        kwargs["tron"] = tron
         normalizers = {
-            'abi': normalize_abi,
-            'bytecode': normalize_bytecode,
-            'bytecode_runtime': normalize_bytecode,
+            "abi": normalize_abi,
+            "bytecode": normalize_bytecode,
+            "bytecode_runtime": normalize_bytecode,
         }
 
         contract = PropertyCheckingFactory(
-            class_name or cls.__name__,
-            (cls,),
-            kwargs,
-            normalizers=normalizers)
+            class_name or cls.__name__, (cls,), kwargs, normalizers=normalizers
+        )
 
-        setattr(contract, 'functions', ContractFunctions(contract.abi, contract.tron))
-        setattr(contract, 'fallback', Contract.get_fallback_function(contract.abi, contract.tron))
+        setattr(contract, "functions", ContractFunctions(contract.abi, contract.tron))
+        setattr(
+            contract,
+            "fallback",
+            Contract.get_fallback_function(contract.abi, contract.tron),
+        )
 
         return contract
 
@@ -225,21 +223,17 @@ class Contract:
 
         """
         return cls.tron.transaction_builder.create_smart_contract(
-            **kwargs,
-            abi=cls.abi,
-            bytecode=to_hex(cls.bytecode)
+            **kwargs, abi=cls.abi, bytecode=to_hex(cls.bytecode)
         )
 
     @classmethod
     def constructor(cls):
         if cls.bytecode is None:
             raise ValueError(
-                "Cannot call constructor on a contract that does not have 'bytecode' associated "
-                "with it"
+                "Cannot call constructor on a contract that does not have 'bytecode' "
+                "associated with it"
             )
-        return ContractConstructor(cls.tron,
-                                   cls.abi,
-                                   cls.bytecode)
+        return ContractConstructor(cls.tron, cls.abi, cls.bytecode)
 
     @combomethod
     def encodeABI(cls, fn_name, args=None, kwargs=None, data=None):
@@ -247,7 +241,7 @@ class Contract:
         that matches the given name and arguments..
         """
         fn_abi, fn_selector, fn_arguments = get_function_info(
-            fn_name, contract_abi=cls.abi, args=args, kwargs=kwargs,
+            fn_name, contract_abi=cls.abi, args=args, kwargs=kwargs
         )
 
         if data is None:
@@ -259,11 +253,12 @@ class Contract:
     def get_fallback_function(abi, tron, address=None):
         if abi and fallback_func_abi_exists(abi):
             return ContractFunction.factory(
-                'fallback',
+                "fallback",
                 tron=tron,
                 contract_abi=abi,
                 address=address,
-                function_identifier=FallbackFn)()
+                function_identifier=FallbackFn,
+            )()
 
         return NonExistentFallbackFunction()
 
@@ -275,22 +270,24 @@ class Contract:
 
     @combomethod
     def get_function_by_signature(self, signature):
-        if ' ' in signature:
+        if " " in signature:
             raise ValueError(
-                'Function signature should not contain any spaces. '
-                'Found spaces in input: %s' % signature
+                "Function signature should not contain any spaces. "
+                "Found spaces in input: %s" % signature
             )
 
         def callable_check(fn_abi):
             return abi_to_signature(fn_abi) == signature
 
-        fns = find_functions_by_identifier(self.abi, self.tron, self.address, callable_check)
-        return get_function_by_identifier(fns, 'signature')
+        fns = find_functions_by_identifier(
+            self.abi, self.tron, self.address, callable_check
+        )
+        return get_function_by_identifier(fns, "signature")
 
     @combomethod
     def find_functions_by_name(self, fn_name):
         def callable_check(fn_abi):
-            return fn_abi['name'] == fn_name
+            return fn_abi["name"] == fn_name
 
         return find_functions_by_identifier(
             self.abi, self.tron, self.address, callable_check
@@ -299,15 +296,19 @@ class Contract:
     @combomethod
     def get_function_by_name(self, fn_name):
         fns = self.find_functions_by_name(fn_name)
-        return get_function_by_identifier(fns, 'name')
+        return get_function_by_identifier(fns, "name")
 
     @combomethod
     def get_function_by_selector(self, selector):
         def callable_check(fn_abi):
-            return encode_hex(function_abi_to_4byte_selector(fn_abi)) == to_4byte_hex(selector)
+            return encode_hex(function_abi_to_4byte_selector(fn_abi)) == to_4byte_hex(
+                selector
+            )
 
-        fns = find_functions_by_identifier(self.abi, self.tron, self.address, callable_check)
-        return get_function_by_identifier(fns, 'selector')
+        fns = find_functions_by_identifier(
+            self.abi, self.tron, self.address, callable_check
+        )
+        return get_function_by_identifier(fns, "selector")
 
     @combomethod
     def find_functions_by_args(self, *args):
@@ -321,7 +322,7 @@ class Contract:
     @combomethod
     def get_function_by_args(self, *args):
         fns = self.find_functions_by_args(*args)
-        return get_function_by_identifier(fns, 'args')
+        return get_function_by_identifier(fns, "args")
 
 
 class ContractConstructor:
@@ -338,7 +339,9 @@ class ContractConstructor:
     def check_forbidden_keys_in_transaction(transaction, forbidden_keys=None):
         keys_found = set(transaction.keys()) & set(forbidden_keys)
         if keys_found:
-            raise ValueError("Cannot set {} in transaction".format(', '.join(keys_found)))
+            raise ValueError(
+                "Cannot set {} in transaction".format(", ".join(keys_found))
+            )
 
     @combomethod
     def transact(self, **kwargs):
@@ -352,22 +355,20 @@ class ContractConstructor:
         """
 
         return self.tron.transaction_builder.create_smart_contract(
-            **kwargs,
-            abi=self.abi,
-            bytecode=to_hex(self.bytecode)
+            **kwargs, abi=self.abi, bytecode=to_hex(self.bytecode)
         )
 
 
 def find_functions_by_identifier(contract_abi, tron, address, callable_check):
-    fns_abi = filter_by_type('function', contract_abi)
+    fns_abi = filter_by_type("function", contract_abi)
     return [
         ContractFunction.factory(
-            fn_abi['name'],
+            fn_abi["name"],
             tron=tron,
             contract_abi=contract_abi,
             address=address,
-            function_identifier=fn_abi['name'],
-            abi=fn_abi
+            function_identifier=fn_abi["name"],
+            abi=fn_abi,
         )
         for fn_abi in fns_abi
         if callable_check(fn_abi)
@@ -377,11 +378,11 @@ def find_functions_by_identifier(contract_abi, tron, address, callable_check):
 def get_function_by_identifier(fns, identifier):
     if len(fns) > 1:
         raise ValueError(
-            'Found multiple functions with matching {0}. '
-            'Found: {1!r}'.format(identifier, fns)
+            "Found multiple functions with matching {0}. "
+            "Found: {1!r}".format(identifier, fns)
         )
     elif len(fns) == 0:
         raise ValueError(
-            'Could not find any function with matching {0}'.format(identifier)
+            "Could not find any function with matching {0}".format(identifier)
         )
     return fns[0]

@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------------------------------
 # Copyright (c) iEXBase. All rights reserved.
-# Licensed under the MIT License. See License.txt in the project root for license information.
+# Licensed under the MIT License.
+# See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
 
 import decimal
@@ -11,9 +12,7 @@ from tronapi.utils.types import is_string, is_integer
 
 MIN_SUN = 0
 MAX_SUN = 2 ** 256 - 1
-UNITS = {
-    'sun': decimal.Decimal('1000000')
-}
+UNITS = {"sun": decimal.Decimal("1000000")}
 
 
 def from_sun(number: int) -> Union[int, decimal.Decimal]:
@@ -29,7 +28,7 @@ def from_sun(number: int) -> Union[int, decimal.Decimal]:
     if number < MIN_SUN or number > MAX_SUN:
         raise ValueError("value must be between 1 and 2**256 - 1")
 
-    unit_value = UNITS['sun']
+    unit_value = UNITS["sun"]
 
     with localcontext() as ctx:
         ctx.prec = 999
@@ -56,14 +55,14 @@ def to_sun(number: int) -> int:
         raise TypeError("Unsupported type.  Must be one of integer, float, or string")
 
     s_number = str(number)
-    unit_value = UNITS['sun']
+    unit_value = UNITS["sun"]
 
     if d_number == 0:
         return 0
 
-    if d_number < 1 and '.' in s_number:
+    if d_number < 1 and "." in s_number:
         with localcontext() as ctx:
-            multiplier = len(s_number) - s_number.index('.') - 1
+            multiplier = len(s_number) - s_number.index(".") - 1
             ctx.prec = multiplier
             d_number = decimal.Decimal(value=number, context=ctx) * 10 ** multiplier
         unit_value /= 10 ** multiplier

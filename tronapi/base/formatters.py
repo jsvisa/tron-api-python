@@ -9,9 +9,7 @@ from collections import Mapping, Iterable
 from eth_utils import to_dict
 
 from tronapi.base.decorators import reject_recursive_repeats
-from tronapi.base.toolz import (
-    curry
-)
+from tronapi.base.toolz import curry
 from tronapi.utils.types import is_string
 
 
@@ -23,7 +21,9 @@ def apply_formatters_to_dict(formatters, value):
             try:
                 yield key, formatters[key](item)
             except (TypeError, ValueError) as exc:
-                raise type(exc)("Could not format value %r as field %r" % (item, key)) from exc
+                raise type(exc)(
+                    "Could not format value %r as field %r" % (item, key)
+                ) from exc
         else:
             yield key, item
 
@@ -32,7 +32,7 @@ def apply_formatters_to_dict(formatters, value):
 def recursive_map(func, data):
     """
     Apply func to data, and any collection items inside data (using map_collection).
-    Define func so that it only applies to the type of value that you want it to apply to.
+    Define func so that it only applies to the type of value that you want it to apply.
     """
 
     def recurse(item):

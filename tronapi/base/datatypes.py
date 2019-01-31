@@ -5,10 +5,7 @@
 # --------------------------------------------------------------------
 
 from tronapi.base.formatters import apply_formatters_to_dict
-from tronapi.base.toolz import (
-    concat,
-    curry,
-)
+from tronapi.base.toolz import concat, curry
 
 
 @curry
@@ -34,9 +31,7 @@ class PropertyCheckingFactory(type):
             verify_key_attr(concat(base.__dict__.keys() for base in all_bases))
 
         if normalizers:
-            processed_namespace = apply_formatters_to_dict(
-                normalizers,
-                namespace)
+            processed_namespace = apply_formatters_to_dict(normalizers, namespace)
         else:
             processed_namespace = namespace
 

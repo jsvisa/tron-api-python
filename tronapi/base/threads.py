@@ -9,6 +9,7 @@ class Timeout(Exception):
     """
     A limited subset of the `gevent.Timeout` context manager.
     """
+
     seconds = None
     exception = None
     begun_at = None
@@ -27,13 +28,15 @@ class Timeout(Exception):
 
     def __str__(self):
         if self.seconds is None:
-            return ''
+            return ""
         return "{0} seconds".format(self.seconds)
 
     @property
     def expire_at(self):
         if self.seconds is None:
-            raise ValueError("Timeouts with `seconds == None` do not have an expiration time")
+            raise ValueError(
+                "Timeouts with `seconds == None` do not have an expiration time"
+            )
         elif self.begun_at is None:
             raise ValueError("Timeout has not been started")
         return self.begun_at + self.seconds
@@ -70,11 +73,7 @@ class Timeout(Exception):
 
 class ThreadWithReturn(threading.Thread):
     def __init__(self, target=None, args=None, kwargs=None):
-        super().__init__(
-            target=target,
-            args=args or tuple(),
-            kwargs=kwargs or {},
-        )
+        super().__init__(target=target, args=args or tuple(), kwargs=kwargs or {})
         self.target = target
         self.args = args
         self.kwargs = kwargs
@@ -108,11 +107,7 @@ class TimerClass(threading.Thread):
 
 
 def spawn(target, *args, thread_class=ThreadWithReturn, **kwargs):
-    thread = thread_class(
-        target=target,
-        args=args,
-        kwargs=kwargs,
-    )
+    thread = thread_class(target=target, args=args, kwargs=kwargs)
     thread.daemon = True
     thread.start()
     return thread

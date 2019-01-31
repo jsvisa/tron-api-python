@@ -8,7 +8,7 @@
 # The default is verified links.
 # If you do not know what links are used for, it is recommended not to change
 DEFAULT_NODES = {
-    'full_node': 'https://api.trongrid.io',
-    'solidity_node': 'https://api.trongrid.io',
-    'event_server': 'https://api.trongrid.io'
+    "full_node": "https://api.trongrid.io",
+    "solidity_node": "https://api.trongrid.io",
+    "event_server": "https://api.trongrid.io",
 }

@@ -19,10 +19,7 @@ class Module:
         if hasattr(target, module_name):
             raise AttributeError(
                 "Cannot set {0} module named '{1}'.  The Tron object "
-                "already has an attribute with that name".format(
-                    target,
-                    module_name,
-                )
+                "already has an attribute with that name".format(target, module_name)
             )
 
         if isinstance(target, Module):

@@ -28,7 +28,7 @@ from tronapi.base.encoding import (
     to_int,
     to_text,
     to_json,
-    hex_encode_abi_type
+    hex_encode_abi_type,
 )
 
 from tronapi.exceptions import InvalidTronError, TronError
@@ -42,9 +42,7 @@ from tronapi.utils.currency import to_sun, from_sun
 from tronapi.utils.hexadecimal import remove_0x_prefix, add_0x_prefix
 from tronapi.utils.types import is_integer
 
-DEFAULT_MODULES = {
-    'trx': Trx
-}
+DEFAULT_MODULES = {"trx": Trx}
 
 
 class Tron:
@@ -80,32 +78,35 @@ class Tron:
 
         # We check the obtained nodes, if the necessary parameters
         # are not specified, then we take the default
-        kwargs.setdefault('full_node', constants.DEFAULT_NODES['full_node'])
-        kwargs.setdefault('solidity_node', constants.DEFAULT_NODES['solidity_node'])
-        kwargs.setdefault('event_server', constants.DEFAULT_NODES['event_server'])
+        kwargs.setdefault("full_node", constants.DEFAULT_NODES["full_node"])
+        kwargs.setdefault("solidity_node", constants.DEFAULT_NODES["solidity_node"])
+        kwargs.setdefault("event_server", constants.DEFAULT_NODES["event_server"])
 
         # The node manager allows you to automatically determine the node
         # on the router or manually refer to a specific node.
         # solidity_node, full_node or event_server
-        self.manager = TronManager(self, dict(
-            full_node=kwargs.get('full_node'),
-            solidity_node=kwargs.get('solidity_node'),
-            event_server=kwargs.get('event_server')
-        ))
+        self.manager = TronManager(
+            self,
+            dict(
+                full_node=kwargs.get("full_node"),
+                solidity_node=kwargs.get("solidity_node"),
+                event_server=kwargs.get("event_server"),
+            ),
+        )
 
         # If the parameter of the private key is not empty,
         # then write to the variable
-        if 'private_key' in kwargs:
-            self.private_key = kwargs.get('private_key')
+        if "private_key" in kwargs:
+            self.private_key = kwargs.get("private_key")
 
         # We check whether the default wallet address is set when
         # defining the class, and then written to the variable
-        if 'default_address' in kwargs:
-            self.default_address = kwargs.get('default_address')
+        if "default_address" in kwargs:
+            self.default_address = kwargs.get("default_address")
 
         # If custom methods are not declared,
         # we take the default from the list
-        modules = kwargs.setdefault('modules', DEFAULT_MODULES)
+        modules = kwargs.setdefault("modules", DEFAULT_MODULES)
         for module_name, module_class in modules.items():
             module_class.attach(self, module_name)
 
@@ -118,12 +119,12 @@ class Tron:
     @default_block.setter
     def default_block(self, block_id):
         """Sets the default block used as a reference for all future calls."""
-        if block_id in ('latest', 'earliest', 0):
+        if block_id in ("latest", "earliest", 0):
             self._default_block = block_id
             return
 
         if not is_integer(block_id) or not block_id:
-            raise ValueError('Invalid block ID provided')
+            raise ValueError("Invalid block ID provided")
 
         self._default_block = abs(block_id)
 
@@ -148,7 +149,7 @@ class Tron:
         try:
             private_key = PrivateKey(value)
         except ValueError:
-            raise TronError('Invalid private key provided')
+            raise TronError("Invalid private key provided")
 
         self._private_key = str(private_key).lower()
 
@@ -168,7 +169,7 @@ class Tron:
         """
 
         if not self.isAddress(address):
-            raise InvalidTronError('Invalid address provided')
+            raise InvalidTronError("Invalid address provided")
 
         _hex = self.address.to_hex(address)
         _base58 = self.address.from_hex(address)
@@ -178,10 +179,7 @@ class Tron:
         if self._private_key and _private_base58 != _base58:
             self._private_key = None
 
-        self._default_address = AttributeDict({
-            'hex': _hex,
-            'base58': _base58
-        })
+        self._default_address = AttributeDict({"hex": _hex, "base58": _base58})
 
     def get_event_result(self, **kwargs):
         """Will return all events matching the filters.
@@ -191,31 +189,33 @@ class Tron:
         """
 
         # Check the most necessary parameters
-        contract_address = kwargs.setdefault('contract_address', self.default_address.hex)
-        event_name = kwargs.setdefault('event_name', 'Notify')
-        since_timestamp = kwargs.setdefault('since_timestamp', 0)
-        block_number = kwargs.setdefault('block_number', '')
-        size = kwargs.setdefault('size', 20)
-        page = kwargs.setdefault('page', 1)
+        contract_address = kwargs.setdefault(
+            "contract_address", self.default_address.hex
+        )
+        event_name = kwargs.setdefault("event_name", "Notify")
+        since_timestamp = kwargs.setdefault("since_timestamp", 0)
+        block_number = kwargs.setdefault("block_number", "")
+        size = kwargs.setdefault("size", 20)
+        page = kwargs.setdefault("page", 1)
 
         if not self.isAddress(contract_address):
-            raise InvalidTronError('Invalid contract address provided')
+            raise InvalidTronError("Invalid contract address provided")
 
         if event_name and not contract_address:
-            raise TronError('Usage of event name filtering requires a contract address')
+            raise TronError("Usage of event name filtering requires a contract address")
 
         if block_number and event_name is None:
-            raise TronError('Usage of block number filtering requires an event name')
+            raise TronError("Usage of block number filtering requires an event name")
 
         if not is_integer(page):
-            raise ValueError('Invalid size provided')
+            raise ValueError("Invalid size provided")
 
         if not is_integer(since_timestamp):
-            raise ValueError('Invalid sinceTimestamp provided')
+            raise ValueError("Invalid sinceTimestamp provided")
 
         # If the size exceeds 200, displays an error
         if size > 200:
-            raise ValueError('Defaulting to maximum accepted size: 200')
+            raise ValueError("Defaulting to maximum accepted size: 200")
 
         # We collect all parameters in one array
         route_params = []
@@ -226,9 +226,13 @@ class Tron:
         if block_number:
             route_params.append(block_number)
 
-        route = '/'.join(route_params)
-        return self.manager.request("/event/contract/{0}?since={1}&size={2}&page={3}"
-                                    .format(route, since_timestamp, size, page), method='get')
+        route = "/".join(route_params)
+        return self.manager.request(
+            "/event/contract/{0}?since={1}&size={2}&page={3}".format(
+                route, since_timestamp, size, page
+            ),
+            method="get",
+        )
 
     def get_event_transaction_id(self, tx_id):
         """Will return all events within a transactionID.
@@ -236,7 +240,7 @@ class Tron:
         Args:
             tx_id (str): TransactionID to query for events.
         """
-        response = self.manager.request('/event/transaction/' + tx_id, method='get')
+        response = self.manager.request("/event/transaction/" + tx_id, method="get")
         return response
 
     @property
@@ -285,7 +289,8 @@ class Tron:
             Examples:
                 >>> tron = Tron()
                 >>> sol = tron.solidity_sha3(['uint8[]'], [[1, 2, 3, 4, 5]])
-                >>> assert sol.hex() == '0x5917e5a395fb9b454434de59651d36822a9e29c5ec57474df3e67937b969460c'
+                >>> hex = '0x5917e5a395fb9b454434de59651d36822a9e29c5ec57474df3e67937b969460c' # noqa
+                >>> assert sol.hex() == hex
 
         """
         if len(abi_types) != len(values):
@@ -296,11 +301,12 @@ class Tron:
 
         normalized_values = map_abi_data([abi_resolver()], abi_types, values)
 
-        hex_string = add_0x_prefix(''.join(
-            remove_0x_prefix(hex_encode_abi_type(abi_type, value))
-            for abi_type, value
-            in zip(abi_types, normalized_values)
-        ))
+        hex_string = add_0x_prefix(
+            "".join(
+                remove_0x_prefix(hex_encode_abi_type(abi_type, value))
+                for abi_type, value in zip(abi_types, normalized_values)
+            )
+        )
         return self.keccak(hexstr=hex_string)
 
     @staticmethod
@@ -311,12 +317,11 @@ class Tron:
             return tron_keccak(input_bytes)
 
         raise TypeError(
-            "You called keccak with first arg %r and keywords %r. You must call it with one of "
-            "these approaches: keccak(text='txt'), keccak(hexstr='0x747874'), "
-            "keccak(b'\\x74\\x78\\x74'), or keccak(0x747874)." % (
-                primitive,
-                {'text': text, 'hexstr': hexstr}
-            )
+            "You called keccak with first arg %r and keywords %r. "
+            "You must call it with one of these approaches: "
+            "keccak(text='txt'), keccak(hexstr='0x747874'), "
+            "keccak(b'\\x74\\x78\\x74'), or keccak(0x747874)."
+            % (primitive, {"text": text, "hexstr": hexstr})
         )
 
     def is_connected(self):
