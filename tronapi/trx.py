@@ -91,7 +91,7 @@ class Trx(Module):
         if "transactions" not in transaction:
             raise TronError('Parameter "transactions" not found')
 
-        return len(transaction)
+        return len(transaction["transactions"])
 
     def get_transaction_from_block(self, block: Any, index: int = 0):
         """Get transaction details from Block
