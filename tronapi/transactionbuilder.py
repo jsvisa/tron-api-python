@@ -64,14 +64,14 @@ class TransactionBuilder(object):
 
         return response
 
-    def send_token(self, to, amount, token_id, account=None):
+    def send_token(self, to, amount, token_name, account=None):
         """Transfer Token
 
         Args:
             to (str): is the recipient address
             amount (int): is the amount of token to transfer.
                           must be integer instead of float
-            token_id (str): Token Name(NOT SYMBOL)
+            token_name (str): Token Name(NOT SYMBOL)
             account: (str): is the address of the withdrawal account
 
         Returns:
@@ -89,7 +89,7 @@ class TransactionBuilder(object):
         if not isinstance(amount, int) or amount <= 0:
             raise InvalidTronError("Invalid amount provided")
 
-        if not is_string(token_id) or not len(token_id):
+        if not is_string(token_name) or not len(token_name):
             raise InvalidTronError("Invalid token ID provided")
 
         if not self.tron.isAddress(account):
@@ -97,13 +97,13 @@ class TransactionBuilder(object):
 
         _to = self.tron.address.to_hex(to)
         _from = self.tron.address.to_hex(account)
-        _token_id = self.tron.toHex(text=token_id)
+        _token_name = self.tron.toHex(text=token_name)
 
         if _to == _from:
             raise TronError("Cannot transfer TRX to the same account")
 
         # In case if "TRX" is specified, we redirect to another method.
-        if token_id.upper() == "TRX":
+        if token_name.upper() == "TRX":
             return self.send_transaction(_to, amount, _from)
 
         return self.tron.manager.request(
@@ -111,7 +111,7 @@ class TransactionBuilder(object):
             {
                 "to_address": _to,
                 "owner_address": _from,
-                "asset_name": _token_id,
+                "asset_name": _token_name,
                 "amount": amount,
             },
         )
@@ -200,13 +200,13 @@ class TransactionBuilder(object):
 
         return response
 
-    def purchase_token(self, to: str, token_id: str, amount: int, buyer=None):
+    def purchase_token(self, to: str, token_name: str, amount: int, buyer=None):
         """Purchase a Token
         Creates an unsigned ICO token purchase transaction.
 
         Args:
             to (str): is the address of the Token issuer
-            token_id (str): is the name of the token
+            token_name (str): is the name of the token
             amount (int): is the number of tokens created
             buyer (str): is the address of the Token owner
 
@@ -218,7 +218,7 @@ class TransactionBuilder(object):
         if not self.tron.isAddress(to):
             raise InvalidAddress("Invalid to address provided")
 
-        if not len(token_id):
+        if not len(token_name):
             raise ValueError("Invalid token ID provided")
 
         if amount <= 0:
@@ -232,7 +232,7 @@ class TransactionBuilder(object):
             {
                 "to_address": _to,
                 "owner_address": _from,
-                "asset_name": self.tron.toHex(text=token_id),
+                "asset_name": self.tron.toHex(text=token_name),
                 "amount": int(amount),
             },
         )

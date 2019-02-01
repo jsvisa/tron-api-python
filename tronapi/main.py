@@ -164,7 +164,7 @@ class Tron:
         Will not sign any transactions.
 
         Args:
-             address (str) Tron Address
+            address (str) Tron Address
 
         """
 

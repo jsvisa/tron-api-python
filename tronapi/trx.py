@@ -409,13 +409,13 @@ class Trx(Module):
 
         return result
 
-    def send_token(self, to, amount, token_id=None, account=None):
+    def send_token(self, to, amount, token_name=None, account=None):
         """Transfer Token
 
         Args:
             to (str): is the recipient address
-            amount (float): is the amount of token to transfer
-            token_id (str): Token Name(NOT SYMBOL)
+            amount (int): is the amount of token to transfer
+            token_name (str): Token Name(NOT SYMBOL)
             account: (str): is the address of the withdrawal account
 
         Returns:
@@ -425,7 +425,7 @@ class Trx(Module):
         if account is None:
             account = self.tron.default_address.hex
 
-        tx = self.tron.transaction_builder.send_token(to, amount, token_id, account)
+        tx = self.tron.transaction_builder.send_token(to, amount, token_name, account)
         sign = self.sign(tx)
         result = self.broadcast(sign)
 
@@ -700,14 +700,14 @@ class Trx(Module):
         """Query token by name.
 
         Args:
-            token_name (str): The name of the token
+            token_name (str): The name of token
 
         """
         if not isinstance(token_name, str) or not len(token_name):
             raise InvalidTronError("Invalid token ID provided")
 
         return self.tron.manager.request(
-            "/wallet/getassetissuebyname", {"value": token_name}
+            "/wallet/getassetissuebyname", {"value": self.tron.toHex(text=token_name)}
         )
 
     def get_block_range(self, start, end):
@@ -948,17 +948,18 @@ class Trx(Module):
         """Get info about thre node"""
         return self.tron.manager.request("/wallet/getnodeinfo")
 
-    def get_token_list_name(self, token_id: str) -> any:
+    def get_token_list_name(self, token_name: str) -> any:
         """Query token list by name.
 
             Args:
-                token_id (str): The name of the token
+                token_name (str): The name of the token
         """
-        if not is_string(token_id):
+        if not is_string(token_name):
             raise ValueError("Invalid token ID provided")
 
         return self.tron.manager.request(
-            "/wallet/getassetissuelistbyname", {"value": token_id}
+            "/wallet/getassetissuelistbyname",
+            {"value": self.tron.toHex(text=token_name)},
         )
 
     def get_token_by_id(self, token_id: str) -> any:
