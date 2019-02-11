@@ -502,12 +502,12 @@ class TransactionBuilder(object):
         # The max energy which will be consumed by the owner
         # in the process of excution or creation of the contract,
         # is an integer which should be greater than 0.
-        origin_energy_limit = kwargs.setdefault("origin_energy_limit", 10000000)
+        origin_energy_limit = kwargs.setdefault("origin_energy_limit", 10_000_000)
 
         if not is_hex(kwargs.get("bytecode")):
             raise ValueError("Invalid bytecode provided")
 
-        if not is_integer(fee_limit) or fee_limit <= 0 or fee_limit > 1000000000:
+        if not is_integer(fee_limit) or fee_limit <= 0 or fee_limit > 1_000_000_000:
             raise ValueError("Invalid fee limit provided")
 
         if not is_integer(call_value) or call_value < 0:
@@ -536,7 +536,7 @@ class TransactionBuilder(object):
         self,
         contract_address,
         function_selector,
-        fee_limit: int = 1000000000,
+        fee_limit: int = 1_000_000_000,
         call_value: int = 0,
         parameters=None,
         issuer_address=None,
@@ -589,7 +589,7 @@ class TransactionBuilder(object):
         if not is_integer(call_value) or call_value < 0:
             raise ValueError("Invalid call value provided")
 
-        if not is_integer(fee_limit) or fee_limit <= 0 or fee_limit > 1000000000:
+        if not is_integer(fee_limit) or fee_limit <= 0 or fee_limit > 1_000_000_000:
             raise ValueError("Invalid fee limit provided")
 
         if len(parameters) > 0:
@@ -1038,7 +1038,7 @@ class TransactionBuilder(object):
         if (
             not is_integer(origin_energy_limit)
             or origin_energy_limit < 0
-            or origin_energy_limit > 10000000
+            or origin_energy_limit > 10_000_000
         ):
             raise ValueError("Invalid originEnergyLimit  provided")
 
