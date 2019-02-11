@@ -36,13 +36,14 @@ from tronapi.manager import TronManager
 from tronapi import HttpProvider, constants
 from tronapi.transactionbuilder import TransactionBuilder
 from tronapi.trx import Trx
+from tronapi.trace import Trace
 from tronapi.base.validation import is_address
 from tronapi.utils.crypto import keccak as tron_keccak
 from tronapi.utils.currency import to_sun, from_sun
 from tronapi.utils.hexadecimal import remove_0x_prefix, add_0x_prefix
 from tronapi.utils.types import is_integer
 
-DEFAULT_MODULES = {"trx": Trx}
+DEFAULT_MODULES = {"trx": Trx, "trace": Trace}
 
 
 class Tron:
