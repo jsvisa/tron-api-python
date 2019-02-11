@@ -1,6 +1,11 @@
+# --------------------------------------------------------------------------------------------
+# Copyright (c) PeckShield. All rights reserved.
+# Licensed under the MIT License.
+# --------------------------------------------------------------------------------------------
+
 import binascii
 from tronapi.module import Module
-from tronapi.exceptions import TronError
+from tronapi.exceptions import InvalidTronError
 
 # The Parity trace struct as below,
 # see more from https://wiki.parity.io/JSONRPC-trace-module#trace_transaction
@@ -47,7 +52,7 @@ class Trace(Module):
         )
 
         if not response:
-            raise TronError("Transaction not found")
+            raise InvalidTronError("Transaction not found")
 
         return response
 
@@ -65,7 +70,11 @@ class Trace(Module):
             "/wallet/gettransactioninfobyid", {"value": tx_id}
         )
 
+        subtraces = {}
         if response.get("internal_transactions") is not None:
+            traces = {}
+            prev_trace_address = []
+            prev_deep = -1
             for inner_tx in response["internal_transactions"]:
                 inner_tx["action"] = {}
                 inner_tx["result"] = {}
@@ -109,8 +118,40 @@ class Trace(Module):
                     action["balance"] = action["value"]
                     del action["value"]
 
+                    # set to null, ref to Parity's implement
+                    inner_tx["result"] = None
+
                 if "deep" not in inner_tx:
                     inner_tx["deep"] = 0
+
+                at = inner_tx["deep"]
+
+                x = len(prev_trace_address) - 1
+                if x < 0:
+                    prev_trace_address.append(0)
+                elif at == prev_deep:
+                    prev_trace_address[x] = prev_trace_address[x] + 1
+                elif at == prev_deep + 1:
+                    prev_trace_address.append(0)
+                elif at < prev_deep:
+                    # set to the previous deep's one
+                    prev_trace_address = traces[at][:]
+                    prev_trace_address[-1] = prev_trace_address[-1] + 1
+                else:
+                    raise InvalidTronError(
+                        "current trace's deep({}) > previous trace's deep({})".format(
+                            at, prev_deep
+                        )
+                    )
+
+                # deep copy
+                inner_tx["traceAddress"] = prev_trace_address[:]
+                traces.update({at: prev_trace_address[:]})
+                k = ",".join(str(e) for e in prev_trace_address[:-1])
+                inner_tx["_traceAt"] = ",".join(str(e) for e in prev_trace_address)
+                subtraces.update({k: subtraces.get(k, 0) + 1})
+
+                prev_deep = inner_tx["deep"]
 
                 # FIXME: get the detail error message
                 if inner_tx.get("rejected", False) is True:
@@ -124,6 +165,8 @@ class Trace(Module):
                     "feeLimit",
                     "feeUsed",
                     "note",
+                    "deep",
+                    "nonce",
                     "index",
                     "caller_address",
                     "transferTo_address",
@@ -131,4 +174,76 @@ class Trace(Module):
                     if k in inner_tx:
                         del inner_tx[k]
 
-        return response
+            for inner_tx in response["internal_transactions"]:
+                inner_tx["subtraces"] = subtraces.get(inner_tx["_traceAt"], 0)
+                del inner_tx["_traceAt"]
+
+        return (response, subtraces.get("", 0))
+
+    def trace_transaction(
+        self,
+        tx_hash: str,
+        tx_pos: int = None,
+        blk_num: int = None,
+        blk_hash: str = None,
+    ):
+        tx = self.get_transaction(tx_hash)
+
+        result = []
+        if (
+            tx.get("raw_data") is not None
+            and tx["raw_data"].get("contract") is not None
+            and len(tx["raw_data"]["contract"]) == 1
+            and tx["raw_data"]["contract"][0].get("type") == "TriggerSmartContract"
+        ):
+            parameter = tx["raw_data"]["contract"][0]["parameter"]["value"]
+            trace_0 = {
+                "action": {
+                    "callType": "call",
+                    "from": parameter["owner_address"],
+                    "gas": hex(tx["raw_data"]["fee_limit"]),
+                    "input": parameter["data"],
+                    "to": parameter["contract_address"],
+                    "value": hex(parameter["call_value"]),
+                },
+                "blockHash": blk_hash,
+                "blockNumber": blk_num,
+                "result": {"gasUsed": "?", "output": "?"},
+                "subtraces": 0,
+                "traceAddress": [],
+                "transactionHash": tx_hash,
+                "transactionPosition": tx_pos,
+                "type": "call",
+            }
+
+            (tx_info, trace_0_subtraces) = self.get_transaction_info(tx_hash)
+            if blk_num is None:
+                blk_num = tx_info["blockNumber"]
+                trace_0["blockNumber"] = blk_num
+            elif blk_num != tx_info["blockNumber"]:
+                raise InvalidTronError(
+                    "blockNumber for tx({}) not equal, given is '{}', "
+                    "in get_transaction_info is '{}'".format(
+                        tx_hash, blk_num, tx_info["blockNumber"]
+                    )
+                )
+
+            trace_0["subtraces"] = trace_0_subtraces
+            trace_0["result"] = {
+                "gasUsed": hex(tx_info["fee"]),
+                "output": tx_info["contractResult"][0],
+            }
+
+            result.append(trace_0)
+            if tx_info.get("internal_transactions") is not None:
+                for trace in tx_info["internal_transactions"]:
+                    trace.update(
+                        {
+                            "blockHash": blk_hash,
+                            "blockNumber": blk_num,
+                            "transactionHash": tx_hash,
+                            "transactionPosition": tx_pos,
+                        }
+                    )
+                    result.append(trace)
+            return result
